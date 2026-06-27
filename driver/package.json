@@ -1,0 +1,18 @@
+{
+  "name": "pixel-agents-driver",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenRouter-구동 드라이버 — claude 프로세스 없이 픽셀 오피스 캐릭터를 살아 움직이게 한다 (PLAN_ref.md 1단계).",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

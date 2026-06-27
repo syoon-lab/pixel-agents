@@ -4,6 +4,8 @@ import type { LoadedAssets, LoadedCharacterSprites } from './assetLoader.js';
 import { readConfig, writeConfig } from './configPersistence.js';
 import { readLayoutFromFile, writeLayoutToFile } from './layoutPersistence.js';
 import { claudeProvider } from './providers/index.js';
+import { mergeProviderCapabilities } from './providers/providerConfig.js';
+import type { ProviderRegistry } from './providers/registry.js';
 
 type WsSend = (message: Record<string, unknown>) => void;
 
@@ -25,6 +27,8 @@ export interface ClientMessageContext {
   cache: AssetCache | null;
   /** Install/uninstall hooks side effect. Needs server url+token known only to cli.ts. */
   onSetHooksEnabled?: SetHooksEnabledSideEffect;
+  /** Enabled providers for capability broadcast. */
+  providerRegistry?: ProviderRegistry;
 }
 
 // ── Setting key constants (mirror adapters/vscode/constants.ts) ──
@@ -134,10 +138,16 @@ function handleWebviewReady(send: WsSend, ctx: ClientMessageContext): void {
   const adapter = store.getAdapter();
 
   // 1. Provider capabilities (must arrive before any agent messages)
+  const caps = ctx.providerRegistry
+    ? mergeProviderCapabilities(ctx.providerRegistry)
+    : {
+        readingTools: [...claudeProvider.readingTools],
+        subagentToolNames: [...claudeProvider.subagentToolNames],
+      };
   send({
     type: 'providerCapabilities',
-    readingTools: [...claudeProvider.readingTools],
-    subagentToolNames: [...claudeProvider.subagentToolNames],
+    readingTools: caps.readingTools,
+    subagentToolNames: caps.subagentToolNames,
   });
 
   // 2. Assets (from server cache, loaded at startup via pngjs)

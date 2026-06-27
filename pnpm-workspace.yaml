@@ -1,0 +1,10 @@
+allowBuilds:
+  '@asyncapi/cli': set this to true or false
+  '@hyperjump/json-pointer': set this to true or false
+  '@hyperjump/json-schema': set this to true or false
+  '@hyperjump/json-schema-core': set this to true or false
+  '@hyperjump/pact': set this to true or false
+  esbuild: set this to true or false
+  protobufjs: set this to true or false
+  puppeteer: set this to true or false
+  yarn: set this to true or false

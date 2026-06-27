@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentStateStore } from '../src/agentStateStore.js';
 import { HookEventHandler } from '../src/hookEventHandler.js';
 import { claudeProvider } from '../src/providers/hook/claude/claude.js';
+import { ProviderRegistry } from '../src/providers/registry.js';
 import { SessionRouter } from '../src/sessionRouter.js';
 import type { AgentState } from '../src/types.js';
 
@@ -51,12 +52,16 @@ describe('HookEventHandler', () => {
   let permissionTimers: Map<number, ReturnType<typeof setTimeout>>;
   let mockWebview: ReturnType<typeof createMockWebview>;
   let handler: HookEventHandler;
+  let registry: ProviderRegistry;
 
   beforeEach(() => {
     agents = new AgentStateStore();
     waitingTimers = new Map();
     permissionTimers = new Map();
     mockWebview = createMockWebview();
+    registry = new ProviderRegistry();
+    registry.register(claudeProvider);
+    registry.setEnabledIds(['claude']);
     // Wire broadcast subscriber so mockWebview captures store broadcasts
     agents.on('broadcast', (msg) => {
       mockWebview.postMessage(msg);
@@ -65,7 +70,7 @@ describe('HookEventHandler', () => {
       agents,
       waitingTimers,
       permissionTimers,
-      claudeProvider,
+      registry,
       new SessionRouter(),
     );
   });
@@ -856,5 +861,31 @@ describe('HookEventHandler', () => {
         }
       }
     });
+  });
+
+  it('drops events from unknown provider ids', () => {
+    const agent = createTestAgent({ id: 1 });
+    agents.set(1, agent);
+    handler.registerAgent('sess-1', 1);
+
+    handler.handleEvent('unknown-provider', {
+      hook_event_name: 'Stop',
+      session_id: 'sess-1',
+    });
+
+    expect(mockWebview.messages.find((m) => m.type === 'agentStatus')).toBeUndefined();
+  });
+
+  it('sets agent.providerId from hook route on first delivered event', () => {
+    const agent = createTestAgent({ id: 1, providerId: undefined });
+    agents.set(1, agent);
+    handler.registerAgent('sess-1', 1);
+
+    handler.handleEvent('claude', {
+      hook_event_name: 'Stop',
+      session_id: 'sess-1',
+    });
+
+    expect(agent.providerId).toBe('claude');
   });
 });

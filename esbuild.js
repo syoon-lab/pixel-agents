@@ -36,29 +36,27 @@ function copyAssets() {
 
 /**
  * Bundle hook scripts (TypeScript) to dist/hooks via esbuild.
- * Produces a self-contained CJS file with shebang for Claude Code to execute.
+ * Produces self-contained CJS files with shebang for CLI hook runners.
  */
 function buildHooks() {
-  const entry = path.join(
-    __dirname,
-    'server',
-    'src',
-    'providers',
-    'hook',
-    'claude',
-    'hooks',
-    'claude-hook.ts',
-  );
-  if (!fs.existsSync(entry)) return;
-  require('esbuild').buildSync({
-    entryPoints: [entry],
-    bundle: true,
-    platform: 'node',
-    target: 'node18',
-    format: 'cjs',
-    outdir: path.join(__dirname, 'dist', 'hooks'),
-    banner: { js: '#!/usr/bin/env node' },
-  });
+  const hooksDir = path.join(__dirname, 'dist', 'hooks');
+  const hookEntries = [
+    path.join(__dirname, 'server', 'src', 'providers', 'hook', 'claude', 'hooks', 'claude-hook.ts'),
+    path.join(__dirname, 'server', 'src', 'providers', 'hook', 'shared', 'pixelAgentsHook.ts'),
+  ];
+
+  for (const entry of hookEntries) {
+    if (!fs.existsSync(entry)) continue;
+    require('esbuild').buildSync({
+      entryPoints: [entry],
+      bundle: true,
+      platform: 'node',
+      target: 'node18',
+      format: 'cjs',
+      outdir: hooksDir,
+      banner: { js: '#!/usr/bin/env node' },
+    });
+  }
   console.log('✓ Built hooks/ → dist/hooks/');
 }
 

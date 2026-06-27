@@ -21,7 +21,11 @@ import {
 } from './assetLoader.js';
 import type { AssetCache } from './clientMessageHandler.js';
 import { FileStateAdapter } from './fileStateAdapter.js';
-import { claudeProvider, copyHookScript } from './providers/index.js';
+import {
+  createProviderRegistry,
+  installEnabledProviderHooks,
+  uninstallEnabledProviderHooks,
+} from './providers/index.js';
 import { PixelAgentsServer } from './server.js';
 
 // ── Argument parsing ──────────────────────────────────────────
@@ -29,6 +33,7 @@ import { PixelAgentsServer } from './server.js';
 interface CliArgs {
   port: number;
   host: string;
+  providers?: string[];
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -40,13 +45,21 @@ function parseArgs(argv: string[]): CliArgs {
     } else if (argv[i] === '--host' && argv[i + 1]) {
       args.host = argv[i + 1];
       i++;
+    } else if ((argv[i] === '--providers' || argv[i] === '--provider') && argv[i + 1]) {
+      args.providers = argv[i + 1]
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      i++;
     } else if (argv[i] === '--help') {
       console.log(`Usage: pixel-agents [options]
 
 Options:
-  --port, -p <number>   Port to listen on (default: 3100)
-  --host <string>       Host to bind to (default: 127.0.0.1)
-  --help                Show this help message`);
+  --port, -p <number>       Port to listen on (default: 3100)
+  --host <string>           Host to bind to (default: 127.0.0.1)
+  --providers <ids>         Comma-separated provider ids (default: codex)
+  --provider <id>           Shorthand for a single provider
+  --help                    Show this help message`);
       process.exit(0);
     }
   }
@@ -86,8 +99,11 @@ async function main(): Promise<void> {
   const server = new PixelAgentsServer();
 
   try {
+    const registry = createProviderRegistry({ enabledIds: args.providers });
+    console.log(`[Pixel Agents] Providers: ${registry.getEnabledIds().join(', ')}`);
+
     // Create runtime first (before server.start, so we can pass it in)
-    const runtime = new AgentRuntime(store, claudeProvider);
+    const runtime = new AgentRuntime(store, registry);
 
     // Wire hook events: HTTP POST -> runtime -> hookEventHandler -> agents
     server.onHookEvent((providerId, event) => {
@@ -95,19 +111,15 @@ async function main(): Promise<void> {
     });
 
     // onSetHooksEnabled side effect: install/uninstall hooks when user toggles in UI.
-    // Captures config from the outer scope after server.start().
     let currentConfig: { port: number; token: string } | null = null;
     const onSetHooksEnabled = async (enabled: boolean): Promise<void> => {
       if (!currentConfig) return;
+      const serverUrl = `http://127.0.0.1:${currentConfig.port}`;
       if (enabled) {
-        await claudeProvider.installHooks(
-          `http://127.0.0.1:${currentConfig.port}`,
-          currentConfig.token,
-        );
-        copyHookScript(distRoot);
+        await installEnabledProviderHooks(registry, serverUrl, currentConfig.token, distRoot);
         console.log('[Pixel Agents] Hooks installed (user toggle)');
       } else {
-        await claudeProvider.uninstallHooks();
+        await uninstallEnabledProviderHooks(registry);
         console.log('[Pixel Agents] Hooks uninstalled (user toggle)');
       }
     };
@@ -121,6 +133,7 @@ async function main(): Promise<void> {
       staticDir,
       assetCache,
       onSetHooksEnabled,
+      providerRegistry: registry,
     });
     currentConfig = { port: config.port, token: config.token };
 
@@ -131,22 +144,33 @@ async function main(): Promise<void> {
     // Install hooks on startup if the persisted setting says so
     if (runtime.hooksEnabled.current) {
       try {
-        await claudeProvider.installHooks(`http://127.0.0.1:${config.port}`, config.token);
-        copyHookScript(distRoot);
+        await installEnabledProviderHooks(
+          registry,
+          `http://127.0.0.1:${config.port}`,
+          config.token,
+          distRoot,
+        );
         console.log('[Pixel Agents] Hooks installed');
       } catch (err) {
         console.error('[Pixel Agents] Failed to install hooks:', err);
       }
     }
 
-    // Start scanning for external sessions (Claude running in user's terminal)
+    // Start scanning for external sessions from all enabled providers
     const cwd = process.cwd();
-    const dirs = claudeProvider.getSessionDirs?.(cwd);
-    if (dirs && dirs[0]) {
-      const projectDir = dirs[0];
-      console.log(`[Pixel Agents] Scanning project dir: ${projectDir}`);
+    const scanRoots = new Set<string>();
+    for (const provider of registry.getEnabled()) {
+      const dirs = provider.getSessionDirs?.(cwd);
+      if (dirs) {
+        for (const dir of dirs) scanRoots.add(dir);
+      }
+    }
+    for (const projectDir of scanRoots) {
+      console.log(`[Pixel Agents] Scanning session dir: ${projectDir}`);
       runtime.startProjectScan(projectDir);
       runtime.startExternalScanning(projectDir);
+    }
+    if (scanRoots.size > 0) {
       runtime.startStaleCheck();
     }
 

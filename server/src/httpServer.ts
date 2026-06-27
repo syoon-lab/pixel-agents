@@ -10,6 +10,7 @@ import type { AgentStateStore } from './agentStateStore.js';
 import type { AssetCache, SetHooksEnabledSideEffect } from './clientMessageHandler.js';
 import { handleClientMessage } from './clientMessageHandler.js';
 import { HOOK_API_PREFIX, MAX_HOOK_BODY_SIZE } from './constants.js';
+import type { ProviderRegistry } from './providers/registry.js';
 import type { AgentState } from './types.js';
 
 /** Options for creating the HTTP + WebSocket server. */
@@ -34,6 +35,8 @@ export interface HttpServerOptions {
   onHookEvent?: (providerId: string, event: Record<string, unknown>) => void;
   /** Invoked when setHooksEnabled is toggled via WebSocket. Standalone installs/uninstalls hooks here. */
   onSetHooksEnabled?: SetHooksEnabledSideEffect;
+  /** Enabled providers (for capability broadcast to WebSocket clients). */
+  providerRegistry?: ProviderRegistry;
 }
 
 /** Result of createHttpServer(). */
@@ -188,6 +191,7 @@ function registerWebSocketRoute(app: FastifyInstance, options: HttpServerOptions
           runtime: options.runtime,
           cache: options.assetCache ?? null,
           onSetHooksEnabled: options.onSetHooksEnabled,
+          providerRegistry: options.providerRegistry,
         });
       } catch {
         // Malformed JSON, ignore

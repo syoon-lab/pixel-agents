@@ -12,7 +12,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import type { HookProvider } from '../../core/src/provider.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import { DismissalTracker } from './dismissalTracker.js';
 import {
@@ -32,6 +31,7 @@ import {
 } from './fileWatcher.js';
 import type { HookEvent } from './hookEventHandler.js';
 import { HookEventHandler } from './hookEventHandler.js';
+import type { ProviderRegistry } from './providers/registry.js';
 import { SessionRouter } from './sessionRouter.js';
 import { cancelPermissionTimer, cancelWaitingTimer } from './timerManager.js';
 import { setHookProvider } from './transcriptParser.js';
@@ -71,14 +71,15 @@ export class AgentRuntime {
 
   constructor(
     private readonly store: AgentStateStore,
-    provider: HookProvider,
+    registry: ProviderRegistry,
   ) {
-    // Wire module-level dependencies
+    const defaultProvider = registry.getDefault();
+    // Wire module-level dependencies (Step 4 will switch these to per-agent registry lookups)
     setDismissalTracker(this.dismissalTracker);
-    setHookProvider(provider);
-    setFileWatcherHookProvider(provider);
-    if (provider.team) {
-      setTeamProvider(provider.team);
+    setHookProvider(defaultProvider);
+    setFileWatcherHookProvider(defaultProvider);
+    if (defaultProvider.team) {
+      setTeamProvider(defaultProvider.team);
     }
     setAgentRemovalCallback((id) => this.removeAgent(id));
     setTeammateRemovalCallback((id) => this.removeTeammate(id, 'team-config'));
@@ -87,7 +88,7 @@ export class AgentRuntime {
       store,
       this.waitingTimers,
       this.permissionTimers,
-      provider,
+      registry,
       new SessionRouter(),
       this.watchAllSessions,
     );
