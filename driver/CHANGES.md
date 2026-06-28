@@ -19,8 +19,8 @@
   출력 5줄)과 에이전트 정원(OpenRouter 모델 ID 포함)을 한곳에 상수로 못박기 위해.
 - **[변경]** `driver/src/logger.ts`, `driver/src/types.ts`, `driver/src/index.ts` 추가 / **이유:** 한국어 컬러
   로그, 공용 타입, 진입점(N명 동시 구동 + Ctrl+C 정리) 분리.
-- **[변경]** `driver/package.json`, `tsconfig.json`, `.env.example`, `.gitignore`, `README.md` 추가 /
-  **이유:** 독립 실행(tsx) + 설정/문서.
+- **[변경]** `driver/package.json`, `tsconfig.json`, `.env.example`, `.gitignore`, `README.md`,
+  `CHANGES.md` 추가 / **이유:** 독립 실행(tsx) + 설정/문서/변경 기록.
 
 ## 설계 결정 (왜 이렇게)
 
@@ -35,3 +35,11 @@
 - **[변경]** 에이전트별 "고정" 세션 ID(`stableSessionId`, workspace+이름 해시) 사용 / **이유:** 매 실행마다
   랜덤 ID를 쓰면 재실행 때마다 새 캐릭터가 생겨 이전 캐릭터들이 Idle로 누적·서성였다. 고정 ID로 바꿔
   재실행 시 같은 캐릭터가 다시 일하게 했다 (`office.ts`, `index.ts`).
+
+## 검증 (실제 동작 확인)
+
+- 실제 OpenRouter 키로 3명(김대리/llama-4, 박사원/mistral, 이주임/phi-4)이 각자 업무를
+  ≤5단계로 분해해 수행함을 확인.
+- 웹뷰가 받는 WebSocket 메시지를 직접 캡처 → `agentCreated` 3건 + 한국어 작업 라벨
+  ("Reading 보조금 신청서" 등) + active↔waiting 전이 확인 (오피스에 캐릭터 3명 렌더).
+- 고정 세션 ID 검증: 드라이버 재실행 시 신규 캐릭터 0명, 기존 #3·#4·#5가 도구활동 재개.

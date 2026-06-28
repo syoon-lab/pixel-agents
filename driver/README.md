@@ -6,6 +6,13 @@
 서버 코드는 **한 줄도 고치지 않는다.** 드라이버는 검증된 Claude 훅 형식의 신호를
 `POST /api/hooks/claude` 로 보내며, "스크립트 대신 OpenRouter로 구동되는 살아있는 mock-claude"로 동작한다.
 
+## 현재 상태 — 완성 & 검증됨 ✅
+
+실제 OpenRouter 키로 김대리·박사원·이주임 3명이 각자 다른 모델로 업무를 ≤5단계로 분해해
+수행하는 것을 확인했다. 웹뷰가 받는 WebSocket 메시지(`agentCreated` / `agentStatus` /
+`agentToolStart`)를 직접 캡처해, 오피스에 캐릭터 3명이 등장하고 한국어 작업 라벨
+("Reading 보조금 신청서" 등)과 함께 active↔waiting 전이가 일어남을 검증했다.
+
 ## 동작 개요
 
 ```
@@ -62,6 +69,16 @@ npm start
 띄웠다면 추가 설정 없이 김대리·박사원·이주임이 오피스에 등장해 각자 책상에서 일하기 시작하고,
 터미널 B에 한국어 업무 로그가 흐른다.
 
+## 수명주기 — Idle은 정상, 재실행하면 같은 캐릭터가 다시 일함
+
+한 번의 실행은 **≤5단계 업무 분해 후 종료**한다(슬라이드 5회 제약). 끝나면 캐릭터는
+**Idle(대기)** 상태로 오피스에 남는다 — 이게 정상이다.
+
+다시 `npm start` 하면 **같은 3명이 다시 일한다.** 에이전트마다 workspace+이름 기반
+**고정 세션 ID**(`stableSessionId`)를 쓰기 때문에, 재실행해도 새 캐릭터가 생기지 않고
+기존 캐릭터가 재사용된다. (랜덤 ID였다면 실행할 때마다 새 캐릭터가 쌓여 이전 캐릭터들이
+Idle로 서성였을 것이다.)
+
 ## 캐릭터가 안 보일 때
 
 캐릭터는 서버가 스캔하는 `~/.claude/projects/<워크스페이스-해시>/` 에 트랜스크립트가
@@ -74,13 +91,13 @@ npm start
 
 ## 파일 구조
 
-| 파일                | 역할                                               |
-| ------------------- | -------------------------------------------------- |
-| `src/index.ts`      | 진입점: 설정 로드 → 서버 연결 → N명 동시 구동      |
-| `src/config.ts`     | 에이전트 정원 + 슬라이드 제약 상수                 |
-| `src/agent.ts`      | 에이전트 1명의 업무 분해 루프 (최대 5 호출)        |
-| `src/openrouter.ts` | OpenRouter 호출 + 관대한 JSON 파싱(작은 모델 폴백) |
-| `src/office.ts`     | 서버 연동: server.json 읽기, 훅 POST, JSONL 쓰기   |
-| `src/actions.ts`    | action → tool_name + 한국어 문구 매핑              |
-| `src/logger.ts`     | 한국어 컬러 로그                                   |
-| `src/types.ts`      | 공용 타입                                          |
+| 파일                | 역할                                                                              |
+| ------------------- | --------------------------------------------------------------------------------- |
+| `src/index.ts`      | 진입점: 설정 로드 → 서버 연결 → N명 동시 구동                                     |
+| `src/config.ts`     | 에이전트 정원 + 슬라이드 제약 상수                                                |
+| `src/agent.ts`      | 에이전트 1명의 업무 분해 루프 (최대 5 호출)                                       |
+| `src/openrouter.ts` | OpenRouter 호출 + 관대한 JSON 파싱(작은 모델 폴백)                                |
+| `src/office.ts`     | 서버 연동: server.json 읽기, 훅 POST, JSONL 쓰기, 고정 세션 ID(`stableSessionId`) |
+| `src/actions.ts`    | action → tool_name + 한국어 문구 매핑                                             |
+| `src/logger.ts`     | 한국어 컬러 로그                                                                  |
+| `src/types.ts`      | 공용 타입                                                                         |
