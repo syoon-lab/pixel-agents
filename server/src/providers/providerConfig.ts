@@ -25,8 +25,7 @@ export function loadProvidersConfig(): ProvidersConfig {
     if (fs.existsSync(configPath)) {
       const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as ProvidersConfig;
       return {
-        defaultProvider:
-          typeof raw.defaultProvider === 'string' ? raw.defaultProvider : undefined,
+        defaultProvider: typeof raw.defaultProvider === 'string' ? raw.defaultProvider : undefined,
         enabled: Array.isArray(raw.enabled)
           ? raw.enabled.filter((id) => typeof id === 'string')
           : undefined,

@@ -11,10 +11,7 @@ export { claudeProvider } from './hook/claude/claude.js';
 export { codexProvider } from './hook/codex/codex.js';
 export { copyHookScript } from './hook/shared/jsonHooksInstaller.js';
 export { copyPixelAgentsHookScript } from './hook/shared/jsonHooksInstaller.js';
-export {
-  installEnabledProviderHooks,
-  uninstallEnabledProviderHooks,
-} from './hookInstall.js';
+export { installEnabledProviderHooks, uninstallEnabledProviderHooks } from './hookInstall.js';
 export { createProviderRegistry } from './loadProviders.js';
-export { loadProvidersConfig,mergeProviderCapabilities } from './providerConfig.js';
+export { loadProvidersConfig, mergeProviderCapabilities } from './providerConfig.js';
 export { ProviderRegistry } from './registry.js';
