@@ -188,6 +188,15 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
   const debugLogFile = path.join(tmpHome, '.pixel-agents', 'debug.log');
   fs.mkdirSync(path.dirname(debugLogFile), { recursive: true });
 
+  // The e2e suite targets the Claude provider (mock-claude binary + ~/.claude
+  // transcripts). The app default provider is `codex`, so pin Claude via
+  // providers.json in this test's isolated HOME — the extension reads it through
+  // createProviderRegistry() -> loadProvidersConfig(os.homedir()).
+  fs.writeFileSync(
+    path.join(tmpHome, '.pixel-agents', 'providers.json'),
+    JSON.stringify({ enabled: ['claude'], defaultProvider: 'claude' }, null, 2),
+  );
+
   const env: Record<string, string> = {
     ...(applyMockHomeEnv(process.env, tmpHome) as Record<string, string>),
     // Prepend mock bin so 'claude' resolves to our mock

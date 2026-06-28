@@ -169,6 +169,14 @@ async function openStandalonePage(page: Page, hostUrl: string): Promise<void> {
 export async function launchStandalone(page: Page): Promise<StandaloneSession> {
   const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-standalone-e2e-home-'));
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-standalone-e2e-workspace-'));
+  // The e2e suite targets the Claude provider (Claude-format hooks + ~/.claude
+  // transcripts). The CLI default provider is `codex`, so pin Claude via
+  // providers.json in this test's isolated HOME (read via os.homedir()).
+  fs.mkdirSync(path.join(tmpHome, '.pixel-agents'), { recursive: true });
+  fs.writeFileSync(
+    path.join(tmpHome, '.pixel-agents', 'providers.json'),
+    JSON.stringify({ enabled: ['claude'], defaultProvider: 'claude' }, null, 2),
+  );
   const hostPort = await getFreePort();
   const hostUrl = `http://127.0.0.1:${hostPort}`;
   const hostProcess = spawnStandaloneHost({
