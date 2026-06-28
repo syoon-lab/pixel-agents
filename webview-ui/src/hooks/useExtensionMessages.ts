@@ -256,6 +256,14 @@ export function useExtensionMessages(
             folderName: folderNames[id],
           });
         }
+        // If layout already loaded (server sends layoutLoaded BEFORE existingAgents,
+        // so on reconnect/refresh the buffer would otherwise never drain), add now.
+        if (layoutReadyRef.current) {
+          for (const p of pendingAgents) {
+            os.addAgent(p.id, p.palette, p.hueShift, p.seatId, true, p.folderName);
+          }
+          pendingAgents = [];
+        }
         setAgents((prev) => {
           const ids = new Set(prev);
           const merged = [...prev];
