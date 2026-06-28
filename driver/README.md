@@ -1,7 +1,7 @@
 # Pixel Agents Driver — OpenRouter로 캐릭터 구동하기
 
 `claude` 프로세스 없이, 각 에이전트가 **자기만의 OpenRouter 모델**로 업무를 단계로 분해해
-수행하고, 그 행동이 픽셀 오피스에 캐릭터 움직임으로 보인다. (설계: [`../PLAN_ref.md`](../PLAN_ref.md) 1단계)
+수행하고, 그 행동이 픽셀 오피스에 캐릭터 움직임으로 보인다. (1단계 PoC: 서버 무수정, 신규 코드는 `driver/`에만)
 
 서버 코드는 **한 줄도 고치지 않는다.** 드라이버는 검증된 Claude 훅 형식의 신호를
 `POST /api/hooks/claude` 로 보내며, "스크립트 대신 OpenRouter로 구동되는 살아있는 mock-claude"로 동작한다.
