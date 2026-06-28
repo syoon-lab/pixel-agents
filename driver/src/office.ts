@@ -1,8 +1,19 @@
+import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
 import type { ServerInfo } from './types.js';
+
+/**
+ * 에이전트마다 "고정" 세션 ID를 만든다 (workspace + 이름 해시 → UUID 형식).
+ * 매 실행마다 랜덤 ID를 쓰면 캐릭터가 매번 새로 생겨 이전 캐릭터들이 Idle로 쌓인다.
+ * 고정 ID면 다시 실행해도 같은 캐릭터가 다시 일하게 된다(세션 재사용).
+ */
+export function stableSessionId(seed: string): string {
+  const h = createHash('sha1').update(seed).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
 
 /**
  * 픽셀 오피스 서버 연동 (서버 코드는 import하지 않는다 — 외형만 흉내).

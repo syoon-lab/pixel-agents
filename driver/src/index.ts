@@ -1,11 +1,10 @@
-import { randomUUID } from 'crypto';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 
 import { runAgent } from './agent.js';
 import { AGENTS } from './config.js';
 import { errLog, sysLog } from './logger.js';
-import { OfficeClient, readServerInfo } from './office.js';
+import { OfficeClient, readServerInfo, stableSessionId } from './office.js';
 
 /**
  * 진입점: 설정을 읽고, 픽셀 오피스 서버에 붙은 뒤, N명의 에이전트를 동시에 구동한다.
@@ -60,8 +59,12 @@ async function main(): Promise<void> {
       '  (브라우저에서 캐릭터가 안 보이면 Settings에서 "Watch All Sessions"를 켜보세요)',
   );
 
-  // 모든 에이전트를 동시에 구동. 각자 독립 루프. (sessionId는 밖에서 만들어 추적)
-  const sessions = AGENTS.map((def) => ({ def, sessionId: randomUUID() }));
+  // 모든 에이전트를 동시에 구동. 각자 독립 루프.
+  // sessionId는 workspace+이름 기반 "고정값" → 재실행 시 같은 캐릭터가 다시 일한다(누적 방지).
+  const sessions = AGENTS.map((def) => ({
+    def,
+    sessionId: stableSessionId(`${office.workspace}::${def.name}`),
+  }));
   await Promise.all(sessions.map((s) => runAgent(s.def, office, apiKey, s.sessionId)));
 
   sysLog('모든 에이전트가 한 번의 업무 분해 실행을 마쳤습니다. 캐릭터는 오피스에 남습니다.');
